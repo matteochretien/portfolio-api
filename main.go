@@ -1,8 +1,8 @@
 package main
 
 import (
+	"github.com/Niromash/niromash-api/OLD/utils/environment"
 	"github.com/Niromash/niromash-api/services"
-	"github.com/Niromash/niromash-api/utils/environment"
 	"log"
 )
 

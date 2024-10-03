@@ -25,3 +25,5 @@ bin/
 run.sh
 docker-compose.yaml
 /server*
+/.env
+.run/
