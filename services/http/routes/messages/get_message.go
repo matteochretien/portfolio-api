@@ -5,7 +5,6 @@ import (
 	"github.com/Niromash/niromash-api/api"
 	"github.com/Niromash/niromash-api/model"
 	"github.com/gin-gonic/gin"
-	"github.com/thoas/go-funk"
 	"gorm.io/gorm"
 	"regexp"
 	"strings"
@@ -65,7 +64,7 @@ func replaceAllTranslations(service api.MainService, msgs ...*model.Message) {
 				matchs := regex.FindAllStringSubmatch(translationValue, -1)
 				if len(matchs) > 0 { // Found sub translations, so translate them
 					for _, match := range matchs {
-						allGroup, scopeFound, keyFound := match[0], match[2], match[1]
+						allGroup, keyFound, scopeFound := match[0], match[1], match[2]
 
 						replaceOriginalTranslation := func(foundMessage *model.Message) {
 							langToFetch := translationKey
@@ -83,32 +82,40 @@ func replaceAllTranslations(service api.MainService, msgs ...*model.Message) {
 
 							if foundTranslation == nil {
 								if foundUsTranslation == nil {
-									foundTranslation = foundMessage.Translations[0]
+									if len(foundMessage.Translations) > 0 {
+										foundTranslation = foundMessage.Translations[0]
+									}
 								} else {
 									foundTranslation = foundUsTranslation
 								}
 							}
-							translation.Value = strings.ReplaceAll(translationValue, allGroup, foundTranslation.Value)
+
+							if foundTranslation != nil {
+								translation.Value = strings.ReplaceAll(translationValue, allGroup, foundTranslation.Value)
+							}
 						}
 
-						if scopeFound == message.Scope.Name { // if the scope is the same, then translate it from the already fetched translations else fetch them from the database
-							find := funk.Find(message.Translations, func(translation *model.MessageTranslation) bool {
-								return translation.Message.Key == keyFound
-							})
+						if scopeFound == message.Scope.Name { // if the scope is the same, look through all messages in the current scope
+							var foundMsg *model.Message
+							for _, msg := range msgs {
+								if msg.Key == keyFound {
+									foundMsg = msg
+									break
+								}
+							}
 
-							if find != nil { // The translation was found! So replace the original translation
-								replaceOriginalTranslation(find.(*model.Message))
-								break
+							if foundMsg != nil {
+								replaceOriginalTranslation(foundMsg)
+								continue
 							}
 						}
 
 						// The scope is not the same, or the translation was not found, so fetch it from the database
 						trans, err := service.Messages().GetMessage(scopeFound, keyFound)
 						if err != nil || len(trans.Translations) == 0 {
-							break
+							continue
 						}
 						replaceOriginalTranslation(trans)
-						break
 					}
 				}
 			}

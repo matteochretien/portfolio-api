@@ -45,10 +45,10 @@ func (m *MessageService) GetAllMessagesFromScope(scope string) (messages []*mode
 		Preload(clause.Associations).
 		Joins("JOIN scopes ON scopes.id = messages.scope_id").
 		Find(&messages, "lower(scopes.name) = ?", strings.ToLower(scope))
-
 	if tx.Error != nil {
 		err = tx.Error
 	}
+
 	return
 }
 
